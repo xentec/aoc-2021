@@ -16,6 +16,7 @@ pub fn main() !void {
     var stdin = std.io.bufferedReader(std.io.getStdIn().reader());
     var stream = stdin.reader();
   
+    var aim: i32 = 0;
     var depth: i32 = 0;
     var position: i32 = 0;
 
@@ -29,9 +30,12 @@ pub fn main() !void {
         };
 
         switch(cmd.type) {
-            .down => depth += cmd.value,
-            .up => depth -= cmd.value,
-            .forward => position += cmd.value,
+            .down => aim += cmd.value,
+            .up => aim -= cmd.value,
+            .forward => {
+                position += cmd.value;
+                depth += cmd.value * aim;
+            },
         }
 
     }
