@@ -10,15 +10,16 @@ const Board = struct {
 
     map: Map,
     scores: Score,
+    finished: bool,
 
     fn init(alloc: std.mem.Allocator) !Self {
         var scores = std.mem.zeroes(Score);
         var map = Map.init(alloc);
         try map.ensureTotalCapacity(Size*Size);
-
         return Self {
             .scores = scores,
             .map = map,
+            .finished = false,
         };
     }
 
@@ -86,9 +87,9 @@ pub fn main() !void {
     }
 
     var numWinning: Board.NumType = undefined;
-stop:
     for (deck.items) |num| {
         for (boardList.items) |*board, boardIdx| {
+            if (board.finished) continue;
             var field = board.map.getPtr(num) orelse continue;
             field.marked = true;
             var ls = &board.scores;
@@ -99,7 +100,7 @@ stop:
             if(std.math.max(lsRow.*, lsCol.*) == 5) {
                 numWinning = num;
                 brd = board;
-                break :stop;
+                brd.finished = true;
             }
         }
     }
