@@ -61,11 +61,8 @@ pub fn main() !void {
     while (try stream.readUntilDelimiterOrEof(&buf, '\n')) |line| {
         const vec = try Vector.parse(line);
         var v = vec.dir();
-        if (v.x != 0 and v.y != 0) continue;
-
         var p = vec.start;
-        var over = false;
-        while (!over) : (p = p.move(&v)) {
+        while (true) : (p = p.move(&v)) {
             var entry = try map.getOrPut(p);
             if(entry.found_existing) {
                 entry.value_ptr.* += 1;
@@ -73,7 +70,7 @@ pub fn main() !void {
                 entry.value_ptr.* = 1;
             }
             if (p.eql(&vec.end))
-                over = true;
+                break;
         }
     }
 
