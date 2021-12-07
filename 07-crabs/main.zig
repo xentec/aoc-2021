@@ -21,11 +21,13 @@ pub fn main() !void {
 
     var sum: u32 = std.math.maxInt(u32);
     var posBest: u32 = 0;
-    for (hist.keys()) |target| {
+    var target: u32 = 0;
+    while (target < 1024) : (target += 1) {
         var tmp: u32 = 0;
         for (hist.keys()) |pos| {
-            const offset = try std.math.absInt(@intCast(i32, target) - pos);
-            tmp += @intCast(u32, offset) * hist.get(pos).?;
+            const offset = @intCast(u32, try std.math.absInt(@intCast(i32, target) - pos));
+            const fuel = offset*(offset+1)/2;
+            tmp += fuel * hist.get(pos).?;
         }
         if (sum > tmp) {
             sum = tmp;
