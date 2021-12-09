@@ -55,6 +55,28 @@ const Map = struct {
         return cell < self.posVal(x-1, y) and cell < self.posVal(x, y-1)
            and cell < self.posVal(x+1, y) and cell < self.posVal(x, y+1);
     }
+
+    fn flood(self: *Self, x: isize, y: isize) !u32 {
+        const P = struct {x: isize, y: isize,};
+        var stack = try std.ArrayList(P).initCapacity(self.field.allocator, 100);
+        defer stack.deinit();
+
+        var size: u32 = 0;
+        try stack.append(P {.x=x,.y=y});
+        while (stack.popOrNull()) |pos| {
+            var cell = self.posPtr(pos.x, pos.y);
+            if (cell.* == 9)
+                continue;
+
+            size += 1;
+            self.posPtr(pos.x, pos.y).* = 9;
+            try stack.append(P{.x=pos.x-1, .y=pos.y});
+            try stack.append(P{.x=pos.x, .y=pos.y-1});
+            try stack.append(P{.x=pos.x+1, .y=pos.y});
+            try stack.append(P{.x=pos.x, .y=pos.y+1});
+        }
+        return size;
+    }
 };
 
 pub fn main() !void {
@@ -78,15 +100,22 @@ pub fn main() !void {
     }
     const heigth = lines;
 
-    var output: usize = 0;
+    var size_list = try std.ArrayList(u32).initCapacity(alloc, 100);
     var y: isize = 0;
     while (y < heigth) : (y+=1) {
         var x: isize = 0;
         while (x < width) : (x+=1) {
-            if (map.isLowest(x, y))
-                output += map.posVal(x, y) + 1;
+            if (map.posVal(x, y) == 9)
+                continue;
+
+            var size = try map.flood(x, y);
+            try size_list.append(size);
         }
     }
+    std.sort.sort(u32, size_list.items, {}, comptime std.sort.desc(u32));
+    var output: usize = 1;
+    for (size_list.items[0..3]) |size|
+        output *= size;
 
     pr("{}\n", .{output});
 }
