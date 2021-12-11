@@ -17,7 +17,7 @@ const Cave = struct {
         return self;
     }
 
-    fn isBig(self: *const Self) bool {
+    fn isSmall(self: *const Self) bool {
         return std.ascii.isUpper(self.name[0]);
     }
 
@@ -55,61 +55,73 @@ pub fn main() !void {
         try addCave(&caves, b, a);
     }
 
-    for (caves.keys()) |cave| {
-        pr("{s}: {s}\n", .{cave, caves.getPtr(cave).?.paths.items});
-    }
-    pr("\n", .{});
-
     var cave_start: *Cave = caves.getPtr("start").?;
     var cave_end: *Cave = caves.getPtr("end").?;
 
     var output: usize = 0;
+    const Step = struct {
+        const Self = @This();
+        cave: *Cave,
+        next: std.ArrayList(*Cave),
 
-    var visited = std.ArrayList(struct {cave: *Cave, depth: usize,}).init(alloc);
-    var smalls = std.AutoArrayHashMap(*Cave, void).init(alloc);
+        fn init(a: std.mem.Allocator, cave: *Cave) !@This() {
+            return Self {.cave=cave,.next=std.ArrayList(*Cave).init(a)};
+        }
+        fn deinit(self: *Self) void {
+            self.next.deinit();
+        }
+    };
 
-    try smalls.put(cave_start, {});
-    try visited.append(.{.cave=cave_start, .depth=0});
-    while (visited.popOrNull()) |*step| {
+    var path = std.ArrayList(Step).init(alloc);
+    var visited = std.AutoHashMap(*Cave, void).init(alloc);
+    var extra: ?*Cave = null;
+
+    try path.append(try Step.init(alloc, cave_start));
+    while (path.items.len > 0) {
+        var step = &path.items[path.items.len-1];
         var cave = step.cave;
-        pr("=>{s}\t[{}]", .{cave.name, step.depth});
+
         if(cave == cave_end) {
             output += 1;
-            pr("\n\tnext: ", .{});
-            for (visited.items) |s| {
-                pr("{s}[{}], ", .{s.cave.name, s.depth});
-            }
-            pr("\n", .{});
-            if (visited.items.len == 0)
-                break;
-            const visit_next = &visited.items[visited.items.len-1];
-            while (step.depth > visit_next.depth) : (step.depth -= 1) {
-                const s = smalls.pop();
-                pr("-{s} ", .{s.key.name});
-            }
-            pr("\n", .{});
-            if (visited.items.len == 1)
-                pr("============================\n", .{});
+            path.pop().deinit();
             continue;
         }
-        pr("\n", .{});
 
-        if (!cave.isBig()) {
-            pr("<<{s}\n", .{cave.name});
-            try smalls.put(cave, {});
-        }
+        if (step.next.capacity == 0) { // never visited
+            if (cave.isSmall()) {
+                var entry = try visited.getOrPut(cave);
+                if(entry.found_existing)
+                    extra = cave;
+            }
+            for (cave.paths.items) |new_path| {
+                var cave_next = caves.getPtr(new_path).?;
+                if (cave_next.isSmall()) {
+                    if(cave_next == cave_start)
+                        continue;
 
-        for (cave.paths.items) |new_path| {
-            var cave_next = caves.getPtr(new_path).?;
-            if(!smalls.contains(cave_next) and (cave.isBig() or cave_next.paths.items.len > 1))
-            {
-                pr("+{s} ", .{cave_next.name});
-                try visited.append(.{.cave=cave_next, .depth=smalls.count()});
+                    if(visited.contains(cave_next)) {
+                        if (extra) |_|
+                            continue;
+                    }
+                }
+                try step.next.append(cave_next);
             }
         }
-        pr("\n", .{});
-    }
-    pr("\n", .{});
 
+        if (step.next.popOrNull()) |next| {
+            try path.append(try Step.init(alloc, next));
+        } else {
+            var s = path.pop();
+            if (s.cave.isSmall()) {
+                const in_extra = if (extra) |e| e == s.cave else false;
+                if (in_extra) {
+                    extra = null;
+                } else
+                    _ = visited.remove(s.cave);
+            }
+            s.deinit();
+            continue;
+        }
+    }
     std.fmt.format(std.io.getStdOut().writer(), "{}\n", .{output}) catch unreachable;
 }
