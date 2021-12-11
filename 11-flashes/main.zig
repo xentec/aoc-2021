@@ -85,7 +85,7 @@ const Map = struct {
         return count;
     }
 
-    fn clean_flashes(self: *Self) void {
+    fn cleanFlashes(self: *Self) void {
         const width: isize = @intCast(isize, self.width - 2);
         const height: isize = @intCast(isize, self.field.items.len / self.width - 2);
         var y: isize = 0;
@@ -116,8 +116,26 @@ const Map = struct {
                 }
             }
         }
-        self.clean_flashes();
+        self.cleanFlashes();
         return flashes;
+    }
+
+    fn inSync(self: *Self) bool {
+        var synced: bool = true;
+
+        const width: isize = @intCast(isize, self.width - 2);
+        const height: isize = @intCast(isize, self.field.items.len / self.width - 2);
+        var y: isize = 0;
+
+        full: while (y < height) : (y+=1) {
+            var x: isize = 0;
+            while (x < width) : (x+=1) {
+                synced = synced and self.posPtr(x, y).e == self.posPtr(0, 0).e;
+                if (!synced)
+                    break :full;
+            }
+        }
+        return synced;
     }
 };
 
@@ -140,8 +158,9 @@ pub fn main() !void {
 
     var output: usize = 0;
     var steps: usize = 0;
-    while (steps < 100) : (steps += 1)
-        output += try map.tick();
+    while (!map.inSync()) : (steps += 1)
+        _ = try map.tick();
 
+    output = steps;
     std.fmt.format(std.io.getStdOut().writer(), "{}\n", .{output}) catch unreachable;
 }
