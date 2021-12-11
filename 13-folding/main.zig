@@ -61,8 +61,19 @@ pub fn main() !void {
             },
             else => unreachable,
         }
-        break;
     }
     var output: usize = paper.count();
+    var y: i16 = 0;
+    while (y<10):(y+=1) {
+        var x: i16 = 0;
+        while (x<50):(x+=1) {
+            if(paper.contains(.{.x=x,.y=y})) {
+                pr("#", .{});
+            } else {
+                pr(".", .{});
+            }
+        }
+        pr("\n", .{});
+    }
     std.fmt.format(std.io.getStdOut().writer(), "{}\n", .{output}) catch unreachable;
 }
